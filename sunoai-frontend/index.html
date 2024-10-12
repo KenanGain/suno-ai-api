@@ -1,0 +1,243 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Suno AI Music Generator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    h1 {
+      color: #333;
+    }
+    #result {
+      margin-top: 20px;
+      color: green;
+    }
+    #loading {
+      color: blue;
+    }
+  </style>
+</head>
+<body>
+  <h1>Suno AI Music Generator</h1>
+
+  <label for="prompt">Enter a music prompt:</label>
+  <input type="text" id="prompt" placeholder="e.g., epic battle music">
+  <button id="generateBtn">Generate Music</button>
+
+  <div id="loading" style="display: none;">Generating music... Please wait.</div>
+  <div id="result"></div>
+
+  <script>
+    document.getElementById('generateBtn').addEventListener('click', async () => {
+      const prompt = document.getElementById('prompt').value;
+      const resultDiv = document.getElementById('result');
+      const loadingDiv = document.getElementById('loading');
+
+      if (!prompt) {
+        alert('Please enter a music prompt.');
+        return;
+      }
+
+      // Clear previous results
+      resultDiv.innerHTML = '';
+      loadingDiv.style.display = 'block';
+
+      try {
+        // Call the backend API via fetch (you can replace this with axios if needed)
+        const response = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: prompt,
+            make_instrumental: false,
+            wait_audio: false,
+          }),
+        });
+
+        const data = await response.json();
+        console.log('API call result:', data);
+
+        // Poll for the audio availability
+        const clipIds = `${data.clips[0].id},${data.clips[1].id}`;
+        console.log(`Generated clip IDs: ${clipIds}`);
+
+        // Poll for audio availability (simulating the backend polling logic)
+        let foundAudio = false;
+        for (let i = 0; i < 60; i++) {
+          console.log(`Polling attempt ${i + 1} for audio availability...`);
+          const audioResponse = await fetch(`/api/get?ids=${clipIds}`);
+          const audioData = await audioResponse.json();
+
+          if (audioData[0].audio_url && audioData[1].audio_url) {
+            foundAudio = true;
+            console.log(`${audioData[0].id} ==> ${audioData[0].audio_url}`);
+            console.log(`${audioData[1].id} ==> ${audioData[1].audio_url}`);
+
+            resultDiv.innerHTML = `
+              <h2>Generated Music:</h2>
+              <p>Track 1: <a href="${audioData[0].audio_url}" target="_blank">Listen</a></p>
+              <p>Track 2: <a href="${audioData[1].audio_url}" target="_blank">Listen</a></p>
+            `;
+            break;
+          }
+
+          // Wait 5 seconds before polling again
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+        }
+
+        if (!foundAudio) {
+          resultDiv.innerHTML = 'Failed to retrieve the audio files. Please try again later.';
+        }
+      } catch (error) {
+        console.error('Error during audio generation or polling:', error);
+        resultDiv.innerHTML = 'An error occurred during the process. Please check the console for more details.';
+      } finally {
+        loadingDiv.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html> -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .container {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        #promptInput {
+            width: 100%;
+            padding: 0.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        #generateBtn {
+            width: 100%;
+            padding: 0.5rem;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #generateBtn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #error {
+            color: red;
+            text-align: center;
+            margin-top: 1rem;
+        }
+        #audioContainer {
+            margin-top: 1rem;
+        }
+        audio {
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Audio Generator</h1>
+        <input type="text" id="promptInput" placeholder="Enter your prompt here">
+        <button id="generateBtn">Generate Audio</button>
+        <div id="error"></div>
+        <div id="audioContainer"></div>
+    </div>
+
+    <script>
+        const baseUrl = "http://localhost:3000";
+        const promptInput = document.getElementById('promptInput');
+        const generateBtn = document.getElementById('generateBtn');
+        const errorDiv = document.getElementById('error');
+        const audioContainer = document.getElementById('audioContainer');
+
+        generateBtn.addEventListener('click', generateAudio);
+
+        async function generateAudio() {
+            const prompt = promptInput.value.trim();
+            if (!prompt) {
+                errorDiv.textContent = 'Please enter a prompt.';
+                return;
+            }
+
+            errorDiv.textContent = '';
+            audioContainer.innerHTML = '';
+            generateBtn.disabled = true;
+            generateBtn.textContent = 'Generating...';
+
+            try {
+                const response = await fetch(`${baseUrl}/api/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        prompt,
+                        make_instrumental: false,
+                        wait_audio: false,
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to generate audio');
+                }
+
+                const data = await response.json();
+                console.log(data);
+                const ids = data.map(item => item.id).join(',');
+
+                for (let i = 0; i < 60; i++) {
+                    const statusResponse = await fetch(`${baseUrl}/api/get?ids=${ids}`);
+                    const statusData = await statusResponse.json();
+
+                    if (statusData[0].status === "streaming") {
+                        statusData.forEach(item => {
+                            const audio = document.createElement('audio');
+                            audio.controls = true;
+                            audio.src = item.audio_url;
+                            audioContainer.appendChild(audio);
+                        });
+                        break;
+                    }
+
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Failed to generate audio. Please try again.';
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.textContent = 'Generate Audio';
+            }
+        }
+    </script>
+</body>
+</html>
